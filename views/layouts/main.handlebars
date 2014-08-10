@@ -15,6 +15,15 @@
   </head>
   <body>
     <header><img src="/img/logo.jpg" alt="meadowlark logo" width="50"></header>
+    
+		<!--  For flash messages  -->
+		{{#if flash}}
+		<div class="alert alert-dismissable alert-{{flash.type}}">
+			<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+			<strong>{{flash.intro}}</strong> {{{flash.message}}}
+		</div>
+		{{/if}}
+   
     {{{body}}}
     
 		{{#if showTests}}
