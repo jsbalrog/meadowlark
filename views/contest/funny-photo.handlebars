@@ -1,0 +1,20 @@
+<h2>Upload Yer Funny Pics</h2>
+ <span class="btn btn-default btn-file">
+  Upload
+  <input type="file" class="form-control" required accept="image/*" id="fieldPhoto" data-url="/upload" multiple name="photo">
+</span>
+<div id="uploads"></div>
+<script>
+$(document).ready(function() {
+  $('#fieldPhoto').fileupload({
+    dataType: 'json',
+    done: function(e, data) {
+      $.each(data.result.files, function(index, file) {
+        $('#uploads').append($('<div class="upload">' +
+                                  '<span class="glyphicon glyphicon-ok"></span>' +
+                                  '&nbsp;' + file.originalName + '</div>'));
+      });
+    }
+  });
+});
+</script>
