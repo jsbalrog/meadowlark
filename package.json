@@ -13,7 +13,8 @@
     "express3-handlebars": "^0.5.0",
     "formidable": "^1.0.15",
     "jquery-file-upload-middleware": "^0.1.5",
-    "lodash": "^2.4.1"
+    "lodash": "^2.4.1",
+    "nodemailer": "^1.1.1"
   },
   "devDependencies": {
     "chai": "^1.9.1",
