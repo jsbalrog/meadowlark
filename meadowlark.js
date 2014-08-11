@@ -16,6 +16,51 @@ app.set('view engine', 'handlebars');
 
 app.set('port', process.env.PORT || 3000);
 
+// setup domains
+app.use(function(req, res, next) {
+	// create a domain for this request
+	var domain = require('domain').create();
+	// handle errors on this domain
+	domain.on('error', function(err) {
+		console.error('DOMAIN ERROR CAUGHT\n', err.stack);
+		try {
+			// failsafe shudown in 5 seconds
+			setTimeout(function() {
+				console.error('Failsafe shutdown.');
+				process.exit(1);
+			}, 5000);
+
+			// disconnect from the cluster
+			var worker = require('cluster').worker;
+			if(worker) worker.disconnect();
+
+			// stop taking new requests
+			server.close();
+
+			try {
+				// attempt to use Express error route
+				next(err);
+			} catch(err) {
+				// if Express error route failed, try
+				// plain Node response
+				console.error('Express error mechanism failed.\n', err.stack);
+				res.statusCode = 500;
+				res.setHeader('content-type', 'text/plain');
+				res.end('Server error.');
+			}
+		} catch(err) {
+			console.error('Unable to send 500 response.\n', err.stack);
+		}
+	});
+
+	// add the request and response objects to the domain
+	domain.add(req);
+	domain.add(res);
+
+	// execute the rest of the rquest chain in the domain
+	domain.run(next);
+});
+
 // use the 'static' middleware that is provided with express
 app.use(express.static(__dirname + '/public'));
 
@@ -182,6 +227,17 @@ app.post('/cart/checkout', function(req, res) {
 	res.render('cart-thank-you', { cart: cart });
 });
 
+app.get('/fail', function(req, res) {
+	throw new Error('Nope!');
+});
+
+app.get('/epic-fail', function(req, res) {
+	// see http://stackoverflow.com/questions/15349733/setimmediate-vs-nexttick
+	setImmediate(function() {
+		throw new Error('Kaboom!');
+	});
+});
+
 // custom 404 page
 app.use(function(req, res) {
   res.status(404);
@@ -191,14 +247,25 @@ app.use(function(req, res) {
 // custom 500 page
 app.use(function(err, req, res, next) {
   console.error(err.stack);
-  res.type('text/plain');
-  res.status(500);
-  res.send('500 - Server Error');
+  res.status(500).render('500');
 });
 
-app.listen(app.get('port'), function() {
-  console.log('Express started on http://localhost:' + app.get('port') + '; press Ctrl-C to terminate.');
-});
+function startServer() {
+	require('http').createServer(app).listen(app.get('port'), function() {
+		console.log('Express started in ' + app.get('env') +
+							 ' mode on http://localhost:' + app.get('port') +
+							 '; press Ctrl-C to terminate.');
+	});
+}
+
+if(require.main === module) {
+	// application run directly; start app server
+	startServer();
+} else {
+	// application imported as a module via "require": export function
+	// to create server
+	module.exports = startServer;
+}
 
 function getWeatherData() {
 	return {
