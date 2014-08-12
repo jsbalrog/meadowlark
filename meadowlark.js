@@ -64,6 +64,15 @@ app.use(function(req, res, next) {
 // use the 'static' middleware that is provided with express
 app.use(express.static(__dirname + '/public'));
 
+var dataDir = __dirname + '/data';
+var vacationPhotoDir = dataDir + '/vacation-photo';
+fs.existsSync(dataDir) || fs.mkdirSync(dataDir);
+fs.existsSync(vacationPhotoDir) || fs.mkdirSync(vacationPhotoDir);
+
+function saveContestEntry(contestName, email, year, month, photoPath) {
+	// TODO
+}
+
 // define middleware to conditionally show tests
 app.use(function(req, res, next) {
 	res.locals.showTests = app.get('env') !== 'production' && req.query.test === '1';
@@ -173,11 +182,26 @@ app.post('/contest/vacation-photo/:year/:month', function(req, res) {
 	var form = new formidable.IncomingForm();
 	form.parse(req, function(err, fields, files) {
 		if(err) return res.redirect(303, '/error');
-		console.log('received fields:');
-		console.log(fields);
-		console.log('received files:');
-		console.log(files);
-		res.redirect(303, '/thank-you');
+		if(err) {
+			res.session.flash = {
+				type: 'danger',
+				intro: 'Oops!',
+				message: 'There was an error processing your submission. '
+			};
+			return res.redirect(303, '/contest/vacation-photo');
+		}
+		var photo = files.photo;
+		var dir = vacationPhotoDir + '/' + Date.now();
+		var path = dir + '/' + photo.name;
+		fs.mkdirSync(dir);
+		fs.renameSync(photo.path, dir + '/' + photo.name);
+		saveContestEntry('vacation-photo', fields.email, req.params.year, req.params.month,  path);
+		req.session.flash = {
+			type: 'success',
+			intro: 'Good luck!',
+			message: 'You have been entered.'
+		};
+		return res.redirect(303, '/contest/vacation-photo/entries');
 	});
 });
 
